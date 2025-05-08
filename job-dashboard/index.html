@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Job Requirements Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      text-align: center;
+    }
+    h1 {
+      margin-bottom: 40px;
+    }
+    .chart {
+      display: inline-block;
+      width: 600px;
+      height: 400px;
+      vertical-align: top;
+      margin: 20px;
+    }
+    svg {
+      background-color: #f9f9f9;
+      border: 1px solid #ccc;
+    }
+    .axis-label {
+      font-size: 12px;
+      fill: #333;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Job Requirements Dashboard</h1>
+
+  <div id="skills-chart" class="chart"></div>
+  <div id="experience-chart" class="chart"></div>
+  <div id="employment-chart" class="chart"></div>
+
+  <!-- Load D3.js -->
+  <script src="https://d3js.org/d3.v7.min.js "></script>
+
+  <!-- Main Script -->
+  <script>
+    // Initialize counters
+    let skillCounts = {};
+    let experienceCounts = {};
+    let employmentCounts = {};
+  
+    // Load and process data
+    d3.csv("data.csv").then(data => {
+      data.forEach(row => {
+        // Process key_skills
+        if (row.key_skills) {
+          const skills = row.key_skills.split(',').map(s => s.trim()).filter(s => s);
+          skills.forEach(skill => {
+            skillCounts[skill] = (skillCounts[skill] || 0) + 1;
+          });
+        }
+  
+        // Process experience
+        const exp = row.experience;
+        if (exp) {
+          experienceCounts[exp] = (experienceCounts[exp] || 0) + 1;
+        }
+  
+        // Process employment
+        const emp = row.employment;
+        if (emp) {
+          employmentCounts[emp] = (employmentCounts[emp] || 0) + 1;
+        }
+      });
+  
+      // Convert to arrays and sort
+      const skillData = Object.entries(skillCounts)
+        .map(([key, value]) => ({ name: key, count: value }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+  
+      const experienceData = Object.entries(experienceCounts)
+        .map(([key, value]) => ({ name: key, count: value }));
+  
+      const employmentData = Object.entries(employmentCounts)
+        .map(([key, value]) => ({ name: key, count: value }));
+  
+      // Render charts
+      createBarChart(skillData, "#skills-chart", "Top Required Skills", true);   // Rotate labels here
+      createBarChart(experienceData, "#experience-chart", "Experience Levels", false);
+      createBarChart(employmentData, "#employment-chart", "Employment Types", false);
+    });
+  
+    // Function to create a bar chart
+    function createBarChart(data, selector, title, rotateLabels = false) {
+      const margin = { top: 40, right: 20, bottom: 100, left: 60 };  // Increased bottom margin
+      const width = 600 - margin.left - margin.right;
+      const height = 400 - margin.top - margin.bottom;
+  
+      const svg = d3.select(selector)
+        .append("svg")
+        .attr("width", 600)
+        .attr("height", 400)
+        .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+  
+      // Chart Title
+      svg.append("text")
+        .attr("x", width / 2)
+        .attr("y", -10)
+        .style("text-anchor", "middle")
+        .style("font-size", "18px")
+        .text(title);
+  
+      const x = d3.scaleBand()
+        .range([0, width])
+        .domain(data.map(d => d.name))
+        .padding(0.2);
+  
+      const y = d3.scaleLinear()
+        .range([height, 0])
+        .domain([0, d3.max(data, d => d.count)]);
+  
+      // X Axis
+      const xAxis = svg.append("g")
+        .attr("transform", `translate(0,${height})`)
+        .call(d3.axisBottom(x).tickSize(0));
+  
+      // Style and rotate x-axis labels conditionally
+      const tickLabels = xAxis.selectAll("text")
+        .style("text-anchor", rotateLabels ? "end" : "middle");
+  
+      if (rotateLabels) {
+        tickLabels
+          .attr("dx", "-.8em")
+          .attr("dy", ".15em")
+          .attr("transform", "rotate(-30)");
+      }
+  
+      // Y Axis
+      svg.append("g")
+        .call(d3.axisLeft(y));
+  
+      // Bars
+      svg.selectAll("rect")
+        .data(data)
+        .enter()
+        .append("rect")
+        .attr("x", d => x(d.name))
+        .attr("y", d => y(d.count))
+        .attr("width", x.bandwidth())
+        .attr("height", d => height - y(d.count))
+        .attr("fill", "#4e79a7");
+    }
+  </script>
+</body>
+</html>
